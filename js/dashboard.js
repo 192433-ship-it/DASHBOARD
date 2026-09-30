@@ -223,7 +223,6 @@ async function cargarDatos() {
 
         cargarFiltros();
 
-
         actualizarTodo();
 
 
@@ -539,10 +538,6 @@ function ponerTexto(id, texto) {
 
 
 // ----------------------------------------------------------
-// GRÁFICO POR DÍA
-// ----------------------------------------------------------
-
-// ----------------------------------------------------------
 // GRÁFICO ACTIVIDADES EN EJECUCIÓN POR MES
 // ----------------------------------------------------------
 
@@ -634,8 +629,6 @@ function actualizarGraficoDia() {
             }
 
 
-            // Primer día del mes de inicio
-
             let mesActual =
                 new Date(
                     inicio.getFullYear(),
@@ -644,8 +637,6 @@ function actualizarGraficoDia() {
                 );
 
 
-            // Primer día del mes de cierre
-
             const mesFin =
                 new Date(
                     fin.getFullYear(),
@@ -653,9 +644,6 @@ function actualizarGraficoDia() {
                     1
                 );
 
-
-            // Recorrer todos los meses
-            // en los que la actividad estuvo activa
 
             while (
                 mesActual <= mesFin
@@ -932,6 +920,7 @@ function crearFechaLocal(fecha) {
     return resultado;
 
 }
+
 
 // ----------------------------------------------------------
 // GRÁFICO ESTADO
@@ -1228,7 +1217,7 @@ function actualizarGraficoResponsable() {
 
 
 // ----------------------------------------------------------
-// GRÁFICO PRIORIDAD - DOUGHNUT
+// GRÁFICO PRIORIDAD
 // ----------------------------------------------------------
 
 function actualizarGraficoPrioridad() {
@@ -1340,7 +1329,8 @@ function actualizarGraficoPrioridad() {
 
                             ],
 
-                            borderWidth: 2
+                            borderWidth:
+                                2
 
                         }
 
@@ -1355,7 +1345,8 @@ function actualizarGraficoPrioridad() {
                     maintainAspectRatio:
                         false,
 
-                    cutout: "60%",
+                    cutout:
+                        "60%",
 
                     plugins: {
 
@@ -1366,7 +1357,8 @@ function actualizarGraficoPrioridad() {
 
                             labels: {
 
-                                padding: 15
+                                padding:
+                                    15
 
                             }
 
@@ -2208,6 +2200,49 @@ function ordenarDatos(columna) {
     datosVisibles.sort(
         function (a, b) {
 
+            // -----------------------------------------
+            // ORDENAR FECHAS CORRECTAMENTE
+            // -----------------------------------------
+
+            if (
+                propiedad === "FechaInicio" ||
+                propiedad === "FechaCierre"
+            ) {
+
+                const fechaA =
+                    convertirFecha(
+                        a[propiedad]
+                    );
+
+                const fechaB =
+                    convertirFecha(
+                        b[propiedad]
+                    );
+
+
+                const tiempoA =
+                    fechaA
+                        ? new Date(
+                            fechaA
+                        ).getTime()
+                        : 0;
+
+
+                const tiempoB =
+                    fechaB
+                        ? new Date(
+                            fechaB
+                        ).getTime()
+                        : 0;
+
+
+                return ordenAscendente
+                    ? tiempoA - tiempoB
+                    : tiempoB - tiempoA;
+
+            }
+
+
             let valorA =
                 a[propiedad] || "";
 
@@ -2267,7 +2302,11 @@ function ordenarDatos(columna) {
 
 function convertirFecha(fecha) {
 
-    if (!fecha) {
+    if (
+        fecha === null ||
+        fecha === undefined ||
+        fecha === ""
+    ) {
 
         return "";
 
@@ -2277,6 +2316,85 @@ function convertirFecha(fecha) {
     const texto =
         String(fecha).trim();
 
+
+    // ------------------------------------------------------
+    // GOOGLE SHEETS / EXCEL
+    // FECHA COMO NÚMERO SERIAL
+    //
+    // Ejemplo:
+    // 46031.99958333333
+    // ------------------------------------------------------
+
+    if (
+        /^\d+(\.\d+)?$/.test(texto)
+    ) {
+
+        const numero =
+            Number(texto);
+
+
+        if (
+            numero > 20000 &&
+            numero < 100000
+        ) {
+
+            const fechaBase =
+                new Date(
+                    Date.UTC(
+                        1899,
+                        11,
+                        30
+                    ) +
+                    numero * 86400000
+                );
+
+
+            if (
+                !isNaN(
+                    fechaBase.getTime()
+                )
+            ) {
+
+                const anio =
+                    fechaBase.getUTCFullYear();
+
+
+                const mes =
+                    String(
+                        fechaBase.getUTCMonth() + 1
+                    ).padStart(
+                        2,
+                        "0"
+                    );
+
+
+                const dia =
+                    String(
+                        fechaBase.getUTCDate()
+                    ).padStart(
+                        2,
+                        "0"
+                    );
+
+
+                return (
+                    anio +
+                    "-" +
+                    mes +
+                    "-" +
+                    dia
+                );
+
+            }
+
+        }
+
+    }
+
+
+    // ------------------------------------------------------
+    // FECHA dd/mm/yyyy
+    // ------------------------------------------------------
 
     const partes =
         texto.split("/");
@@ -2304,18 +2422,28 @@ function convertirFecha(fecha) {
             partes[2];
 
 
-        return (
+        if (
+            /^\d{4}$/.test(anio)
+        ) {
 
-            anio +
-            "-" +
-            mes +
-            "-" +
-            dia
+            return (
 
-        );
+                anio +
+                "-" +
+                mes +
+                "-" +
+                dia
+
+            );
+
+        }
 
     }
 
+
+    // ------------------------------------------------------
+    // FECHA yyyy-mm-dd
+    // ------------------------------------------------------
 
     if (
         /^\d{4}-\d{2}-\d{2}$/.test(
@@ -2334,30 +2462,37 @@ function convertirFecha(fecha) {
 
 
 // ----------------------------------------------------------
-// FORMATEAR FECHA
+// FORMATEAR FECHA PARA MOSTRAR
 // ----------------------------------------------------------
 
 function formatearFecha(fecha) {
 
-    if (!fecha) {
+    if (
+        fecha === null ||
+        fecha === undefined ||
+        fecha === ""
+    ) {
 
         return "";
 
     }
 
 
-    const texto =
-        String(fecha).trim();
+    const fechaConvertida =
+        convertirFecha(fecha);
 
+
+    // yyyy-mm-dd
+    // -> dd/mm/yyyy
 
     if (
         /^\d{4}-\d{2}-\d{2}$/.test(
-            texto
+            fechaConvertida
         )
     ) {
 
         const partes =
-            texto.split("-");
+            fechaConvertida.split("-");
 
 
         return (
@@ -2373,18 +2508,7 @@ function formatearFecha(fecha) {
     }
 
 
-    if (
-        /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(
-            texto
-        )
-    ) {
-
-        return texto;
-
-    }
-
-
-    return texto;
+    return fechaConvertida;
 
 }
 
@@ -2469,6 +2593,7 @@ function mostrarError(mensaje) {
                 >
 
                     ⚠️
+
                     ${escaparHTML(
                         mensaje
                     )}
